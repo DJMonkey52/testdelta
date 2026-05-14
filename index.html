@@ -973,7 +973,7 @@
 
     <script>
         // ⚠️ ЗАМЕНИ НА СВОЙ URL ОТ APPS SCRIPT ⚠️
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCKY7a2ibillTNnqRgmrmG-oQztirhgsDRe5ExoVWa3ZXynGJqGqpFjkP1EtBMbAvxbA/exec'; // Вставь сюда ссылку из Apps Script
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxC2rYBsylaawrZQeqivnqBZnnbdNOSflhiZbps12hlXtS516gXvCkkwrvYTcy6elUgKQ/exec'; // Вставь сюда ссылку из Apps Script
         
         const WEBHOOKS = {
             weekly: 'https://discord.com/api/webhooks/1500899546031591688/wpkBFTZbOGyCFvhJ-SfYbPvbJFikcwDCLv983roAS7zj-AelGhtwWltVZ8JUOEmCvAEv',
@@ -1011,7 +1011,7 @@
 
         // Функция отправки в Google Sheets
         async function writeToGoogleSheet(type, data) {
-            if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbyCKY7a2ibillTNnqRgmrmG-oQztirhgsDRe5ExoVWa3ZXynGJqGqpFjkP1EtBMbAvxbA/exec') {
+            if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === 'ТВОЙ_GOOGLE_SCRIPT_URL') {
                 console.warn('Google Script URL не настроен');
                 return;
             }
