@@ -972,6 +972,9 @@
     </div>
 
     <script>
+        // ⚠️ ЗАМЕНИ НА СВОЙ URL ОТ APPS SCRIPT ⚠️
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCKY7a2ibillTNnqRgmrmG-oQztirhgsDRe5ExoVWa3ZXynGJqGqpFjkP1EtBMbAvxbA/exec'; // Вставь сюда ссылку из Apps Script
+        
         const WEBHOOKS = {
             weekly: 'https://discord.com/api/webhooks/1500899546031591688/wpkBFTZbOGyCFvhJ-SfYbPvbJFikcwDCLv983roAS7zj-AelGhtwWltVZ8JUOEmCvAEv',
             promotion: 'https://discord.com/api/webhooks/1500900181086961846/YJt7paNvrerqttykZ2Qk8q11ogdP-qMU8vBAwdPHf8hXcIoL-WsJbchkP-igh5L4R4gv',
@@ -1006,6 +1009,29 @@
         let weeklyActions = [];
         let promotionActions = [];
 
+        // Функция отправки в Google Sheets
+        async function writeToGoogleSheet(type, data) {
+            if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbyCKY7a2ibillTNnqRgmrmG-oQztirhgsDRe5ExoVWa3ZXynGJqGqpFjkP1EtBMbAvxbA/exec') {
+                console.warn('Google Script URL не настроен');
+                return;
+            }
+            
+            try {
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: type,
+                        ...data
+                    })
+                });
+                console.log('Данные отправлены в Google Sheets');
+            } catch (error) {
+                console.error('Ошибка отправки в Google Sheets:', error);
+            }
+        }
+
         function formatDate(dateStr) {
             if (!dateStr) return '';
             const d = new Date(dateStr);
@@ -1022,13 +1048,9 @@
             });
         }
 
-        // ОСНОВНОЕ ИСПРАВЛЕНИЕ: БАЛЛЫ = (базовые очки) * (количество)
-        // Для патрулей: базовые очки за 1 час = 4, количество = количество часов. Итог = 4 * часы.
-        // Для остальных: базовые очки за 1 участие, количество = количество раз. Итог = базовые * кол-во.
         function calculatePoints(action) {
             let base = action.basePoints || 0;
             let count = parseInt(action.count) || 1;
-            // Патрули не требуют спецобработки — база * часы
             return base * count;
         }
 
@@ -1372,7 +1394,7 @@
                 { name: "📅 Период", value: period, inline: true },
                 { name: "📊 Действия", value: actionsText.substring(0, 1024) },
                 { name: "🏆 Итого баллов", value: `${totalPoints}`, inline: true }
-            ] };
+            ], totalPoints, nickname, rank, period, actionsText };
         }
 
         function formatPromotionEmbed() {
@@ -1397,7 +1419,7 @@
                 { name: "📅 Дата последнего повышения", value: lastPromotionFormatted, inline: true },
                 { name: "📊 Достижения", value: actionsText.substring(0, 1024) },
                 { name: "🏆 Итого баллов", value: `${totalPoints}`, inline: true }
-            ] };
+            ], totalPoints, nickname, currentRank, desiredRank, lastPromotionFormatted, actionsText };
         }
 
         function formatExamEmbed() {
@@ -1410,7 +1432,7 @@
                 { name: "🎓 Тип экзамена", value: examType, inline: true },
                 { name: "💬 Discord @тег", value: discordTag, inline: true },
                 { name: "⏰ Удобное время", value: examTime }
-            ] };
+            ], fullName, examType, discordTag, examTime };
         }
 
         function showAlert(containerId, message, type) {
@@ -1453,9 +1475,20 @@
             const btn = document.getElementById('weeklySubmitBtn');
             btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Отправка...';
             try {
-                const { fields } = formatWeeklyEmbed();
-                await sendToDiscordWithEmbed(WEBHOOKS.weekly, "📊 Еженедельный отчёт", fields, 0x4CAF50);
-                showAlert('weeklyAlert', '✅ Отчёт отправлен в Discord!', 'success');
+                const embedData = formatWeeklyEmbed();
+                await sendToDiscordWithEmbed(WEBHOOKS.weekly, "📊 Еженедельный отчёт", embedData.fields, 0x4CAF50);
+                
+                // Отправка в Google Sheets
+                await writeToGoogleSheet('weekly', {
+                    nickname: embedData.nickname,
+                    rank: embedData.rank,
+                    period: embedData.period,
+                    totalPoints: embedData.totalPoints,
+                    actions: embedData.actionsText,
+                    details: ''
+                });
+                
+                showAlert('weeklyAlert', '✅ Отчёт отправлен в Discord и Google Sheets!', 'success');
                 document.getElementById('weeklyNickname').value = '';
                 document.getElementById('weeklyRank').value = '';
                 weeklyActions = [];
@@ -1472,8 +1505,20 @@
             const btn = document.getElementById('promotionSubmitBtn');
             btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Отправка...';
             try {
-                const { fields } = formatPromotionEmbed();
-                await sendToDiscordWithEmbed(WEBHOOKS.promotion, "⬆️ Запрос на повышение", fields, 0x4CAF50);
+                const embedData = formatPromotionEmbed();
+                await sendToDiscordWithEmbed(WEBHOOKS.promotion, "⬆️ Запрос на повышение", embedData.fields, 0x4CAF50);
+                
+                // Отправка в Google Sheets
+                await writeToGoogleSheet('promotion', {
+                    nickname: embedData.nickname,
+                    currentRank: embedData.currentRank,
+                    desiredRank: embedData.desiredRank,
+                    lastPromotion: embedData.lastPromotionFormatted,
+                    totalPoints: embedData.totalPoints,
+                    actions: embedData.actionsText,
+                    details: ''
+                });
+                
                 showAlert('promotionAlert', '✅ Запрос на повышение отправлен!', 'success');
                 document.getElementById('promotionNickname').value = '';
                 document.getElementById('promotionCurrentRank').value = '';
@@ -1491,8 +1536,18 @@
             const btn = document.getElementById('examSubmitBtn');
             btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Отправка...';
             try {
-                const { fields } = formatExamEmbed();
-                await sendToDiscordWithEmbed(WEBHOOKS.exam, "📝 Запись на экзамен", fields, 0x4CAF50);
+                const embedData = formatExamEmbed();
+                await sendToDiscordWithEmbed(WEBHOOKS.exam, "📝 Запись на экзамен", embedData.fields, 0x4CAF50);
+                
+                // Отправка в Google Sheets
+                await writeToGoogleSheet('exam', {
+                    fullName: embedData.fullName,
+                    examType: embedData.examType,
+                    discordTag: embedData.discordTag,
+                    examTime: embedData.examTime,
+                    details: ''
+                });
+                
                 showAlert('examAlert', '✅ Заявка на экзамен отправлена!', 'success');
                 document.getElementById('examFullName').value = '';
                 document.getElementById('examType').value = '';
